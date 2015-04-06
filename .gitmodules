@@ -1,0 +1,3 @@
+[submodule "ax_encript"]
+	path = ax_encript
+	url = https://github.com/xyyc/ax_encript.git
