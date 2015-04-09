@@ -23,7 +23,7 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
 	}		
 	return 0;
 }
-int ax_file_decode(char *inpath,char *outpath,char *passwrod,char *func,ax_file_progress_cb on_progress,void* ud){
+int ax_file_decode(char *inpath,char *outpath,char *passwrod,ax_file_progress_cb on_progress,void* ud){
 	
 	return 0;
 }
