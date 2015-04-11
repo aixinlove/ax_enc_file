@@ -17,7 +17,9 @@ int _ax_file_size(char *path){
 //interface functions
 int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *desc,ax_file_progress_cb on_progress,void* ud){
 	if(_ax_file_exist(inpath)){
-
+	  FILE *infile=fopen(inpath,"r");
+	  FILE *outfile=fopen(outpath,"w+");
+	  
 	}else{
 		return -1;//file not exist
 	}		
