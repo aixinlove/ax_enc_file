@@ -1,6 +1,7 @@
 #include "ax_enc_file.h"
 #include "ax_encript/ax_encript.h"
 #include <math.h>
+#include <string.h>
 //private functions
 #define _ax_file_version (0x0001)
 #define _ax_file_buffer_block_count (1000)
@@ -35,7 +36,19 @@ struct ax_file_header_t{
 };
 extern ax_encript_func_t ax_enc_func_name_to_value(char *name);
 void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
-    
+    int pwdsize=_ax_file_num_of_passwrod*sizeof(ax_encript_block_t);
+    int passwrodlen=strlen(password);
+    char pwdbuff[pwdsize];
+    int filloffset=0;
+    int segmentcount=ceil((float)pwdsize/(float)passwrodlen);
+    int fullcount=segmentcount-1;
+    for (int i=0; i<fullcount; i++) {
+        memcpy(pwdbuff+filloffset, password, passwrodlen);
+        filloffset+=passwrodlen;
+    }
+    int remainlen=pwdsize-fullcount*passwrodlen;
+    memcpy(pwdbuff+filloffset, password, remainlen);
+    memcpy(pwd, pwdbuff, pwdsize);
 }
 //interface functions
 int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *desc,ax_file_progress_cb on_progress,void* ud){
