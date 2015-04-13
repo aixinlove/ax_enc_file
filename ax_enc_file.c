@@ -35,6 +35,7 @@ struct ax_file_header_t{
     char _private[64];
 };
 extern ax_encript_func_t ax_enc_func_name_to_value(char *name);
+extern void ax_enc_func_to_name(ax_encript_func_t func,char *name,int namelen);
 void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
     int pwdsize=_ax_file_num_of_passwrod*sizeof(ax_encript_block_t);
     int passwrodlen=strlen(password);
@@ -123,16 +124,25 @@ int ax_file_decode(char *inpath,char *outpath,char *password,ax_file_progress_cb
         return -1;
     }
 }
-int ax_file_read_desc(char *inpath){
-    
+int ax_file_read_desc(char *inpath,char *buffer,int bufferlen){
+    if(_ax_file_exist(inpath)){
+        FILE *infile=fopen(inpath, "r");
+        struct ax_file_header_t header;
+        fread(&header, sizeof(header), 1, infile);
+        fseek(infile, header.meta_offset, SEEK_SET);
+        fread(buffer, 1, _ax_min(header.meta_len, bufferlen), infile);
+        fclose(infile);
+    }
     return 0;
 }
-int ax_file_read_enc_type(char *inpath,char *type){
-    
-    return 0;
-}
-int ax_file_read_file_len(char *inpath){
-    
+int ax_file_read_enc_type(char *inpath,char *type,int typelen){
+    if(_ax_file_exist(inpath)){
+        FILE *infile=fopen(inpath, "r");
+        struct ax_file_header_t header;
+        fread(&header, sizeof(header), 1, infile);
+        ax_enc_func_to_name(header.enc_type, type, typelen);
+        fclose(infile);
+    }
     return 0;
 }
 
