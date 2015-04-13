@@ -51,6 +51,9 @@ void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
     memcpy(pwd, pwdbuff, pwdsize);
 }
 //interface functions
+/*  file structure
+ *  /head/content/meta
+ */
 int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *desc,ax_file_progress_cb on_progress,void* ud){
     if(_ax_file_exist(inpath)){
         FILE *infile=fopen(inpath,"r");
@@ -58,11 +61,11 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
         struct ax_file_header_t header;
         header.version=_ax_file_version;
         header.enc_type=ax_enc_func_name_to_value(func);
-        header.content_offset=sizeof(header);
         header.raw_len=_ax_file_size(inpath);
-        header.content_len=0;
-        header.meta_offset=0;
-        header.meta_len=0;
+        header.content_offset=sizeof(header);
+        header.content_len=sizeof(ax_encript_block_t)*(int)ceil((float)header.raw_len/(float)sizeof(ax_encript_block_t));
+        header.meta_offset=header.content_offset+header.content_len;
+        header.meta_len=strlen(desc);
         //write header to output file
         fwrite(&header,sizeof(header),1,outfile);
         //encode file and write to output file
@@ -84,8 +87,12 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
             fwrite(outbuffer,sizeof(ax_encript_block_t),blockcount,outfile);
         }while(readlen!=0);
         //write meta message
-        
-        //update file header
+        fwrite(desc, strlen(desc), 1, outfile);
+        //update file header if neek
+        /*
+        fseek(outfile, 0, SEEK_SET);
+        fwrite(&header,sizeof(header),1,outfile);
+         */
         //close infile
         fclose(infile);
         //close outfile
@@ -95,12 +102,18 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
         return -1;//file not exist
     }
 }
-int ax_file_decode(char *inpath,char *outpath,char *passwrod,ax_file_progress_cb on_progress,void* ud){
+int ax_file_decode(char *inpath,char *outpath,char *password,ax_file_progress_cb on_progress,void* ud){
     if(_ax_file_exist(inpath)){
         FILE *infile=fopen(inpath,"r");
         FILE *outfile=fopen(outpath,"w");
         struct ax_file_header_t header;
         fread(&header, sizeof(header), 1, infile);
+        //loop read buffer and decode
+        ax_encript_block_t inbuffer[_ax_file_buffer_block_count];
+        ax_encript_block_t outbuffer[_ax_file_buffer_block_count];
+        ax_encript_block_t passwordblock[_ax_file_num_of_passwrod];
+        _ax_file_init_password(passwordblock, password);
+        //read content and decode it
         
         fclose(infile);
         fclose(outfile);
