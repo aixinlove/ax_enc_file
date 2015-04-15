@@ -23,17 +23,6 @@ int _ax_file_size(char *path){
     fclose(fp);
     return size;
 }
-
-struct ax_file_header_t{
-    int16_t version;
-    int16_t enc_type;
-    int16_t content_offset;
-    int16_t content_len;
-    int16_t raw_len;
-    int16_t meta_offset;
-    int16_t meta_len;
-    char _private[64];
-};
 extern ax_encript_func_t ax_enc_func_name_to_value(char *name);
 extern void ax_enc_func_to_name(ax_encript_func_t func,char *name,int namelen);
 void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
@@ -57,8 +46,8 @@ void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
  */
 int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *desc,ax_file_progress_cb on_progress,void* ud){
     if(_ax_file_exist(inpath)){
-        FILE *infile=fopen(inpath,"r");
-        FILE *outfile=fopen(outpath,"w+");
+        FILE *infile=fopen(inpath,"rb");
+        FILE *outfile=fopen(outpath,"wb+");
         struct ax_file_header_t header;
         header.version=_ax_file_version;
         header.enc_type=ax_enc_func_name_to_value(func);
@@ -76,24 +65,21 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
         ax_encript_block_t passwordblock[_ax_file_num_of_passwrod];
         _ax_file_init_password(passwordblock, password);
         int readlen=0;
+        int totalblock=0;
         do{
             readlen=fread(inbuffer,1,_ax_file_buffer_size,infile);
             //encript buffer to out buffer
             int blockcount=ceil((float)readlen/(float)sizeof(ax_encript_block_t));
             for(int i=0;i<blockcount;i++){
                 //encript one block
-                ax_encript_do(&(inbuffer[i]), &(passwordblock[i%_ax_file_num_of_passwrod]), &(outbuffer[i]), ax_encript_type_enc, header.enc_type);
+                ax_encript_do(&(inbuffer[i]), &(passwordblock[totalblock%_ax_file_num_of_passwrod]), &(outbuffer[i]), ax_encript_type_enc, header.enc_type);
+                totalblock+=1;
             }
             //write outbuffer to outfile
             fwrite(outbuffer,sizeof(ax_encript_block_t),blockcount,outfile);
         }while(readlen!=0);
         //write meta message
         fwrite(desc, strlen(desc), 1, outfile);
-        //update file header if neek
-        /*
-        fseek(outfile, 0, SEEK_SET);
-        fwrite(&header,sizeof(header),1,outfile);
-         */
         //close infile
         fclose(infile);
         //close outfile
@@ -105,8 +91,8 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
 }
 int ax_file_decode(char *inpath,char *outpath,char *password,ax_file_progress_cb on_progress,void* ud){
     if(_ax_file_exist(inpath)){
-        FILE *infile=fopen(inpath,"r");
-        FILE *outfile=fopen(outpath,"w");
+        FILE *infile=fopen(inpath,"rb");
+        FILE *outfile=fopen(outpath,"wb+");
         struct ax_file_header_t header;
         fread(&header, sizeof(header), 1, infile);
         //loop read buffer and decode
@@ -115,12 +101,25 @@ int ax_file_decode(char *inpath,char *outpath,char *password,ax_file_progress_cb
         ax_encript_block_t passwordblock[_ax_file_num_of_passwrod];
         _ax_file_init_password(passwordblock, password);
         //read content and decode it
-        
+        fseek(infile, header.content_offset, SEEK_SET);
+        int inreadlen=0;
+        int totalblock=0;
+        do {
+            int readlen=fread(inbuffer, 1, _ax_min(_ax_file_buffer_size, header.content_len-inreadlen), infile);
+            int blockcount=ceil((float)readlen/(float)sizeof(ax_encript_block_t));
+            for (int i=0; i<blockcount; i++) {
+                //decode to outbuffer
+                ax_encript_do(&(inbuffer[i]), &(passwordblock[totalblock%_ax_file_num_of_passwrod]), &(outbuffer[i]), ax_encript_type_dec, header.enc_type);
+                totalblock+=1;
+            }
+            //write outbuffer to file
+            fwrite(outbuffer, 1, _ax_min(readlen, header.raw_len-inreadlen), outfile);
+            inreadlen+=readlen;
+        } while (inreadlen<header.content_len);
         fclose(infile);
         fclose(outfile);
         return 0;
     }else{
-        
         return -1;
     }
 }
@@ -135,15 +134,16 @@ int ax_file_read_desc(char *inpath,char *buffer,int bufferlen){
     }
     return 0;
 }
-int ax_file_read_enc_type(char *inpath,char *type,int typelen){
+int ax_file_read_header(char *inpath,struct ax_file_header_t* header){
     if(_ax_file_exist(inpath)){
         FILE *infile=fopen(inpath, "r");
         struct ax_file_header_t header;
         fread(&header, sizeof(header), 1, infile);
-        ax_enc_func_to_name(header.enc_type, type, typelen);
         fclose(infile);
     }
     return 0;
 }
-
-
+int ax_file_get_enctrypt_type(struct ax_file_header_t* header,char *enctype,int enclen){
+    ax_enc_func_to_name(header->enc_type,enctype,enclen);
+    return 0;
+}
