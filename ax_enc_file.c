@@ -147,8 +147,7 @@ int ax_file_read_desc(char *inpath,char *buffer,int bufferlen){
 int ax_file_read_header(char *inpath,struct ax_file_header_t* header){
     if(_ax_file_exist(inpath)){
         FILE *infile=fopen(inpath, "r");
-        struct ax_file_header_t header;
-        fread(&header, sizeof(header), 1, infile);
+        fread(header, sizeof(header), 1, infile);
         fclose(infile);
     }
     return 0;
