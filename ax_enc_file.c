@@ -40,6 +40,12 @@ void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
     memcpy(pwdbuff+filloffset, password, remainlen);
     memcpy(pwd, pwdbuff, pwdsize);
 }
+int _ax_notifiy_progress(ax_file_progress_cb progresscb,float progress,void* ud){
+    if (progresscb!=NULL) {
+        progresscb(progress,ud);
+    }
+    return 0;
+}
 //interface functions
 /*  file structure
  *  /head/content/meta
@@ -65,6 +71,7 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
         ax_encript_block_t passwordblock[_ax_file_num_of_passwrod];
         _ax_file_init_password(passwordblock, password);
         int readlen=0;
+        int total_read_len=0;
         int totalblock=0;
         do{
             readlen=fread(inbuffer,1,_ax_file_buffer_size,infile);
@@ -77,6 +84,8 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
             }
             //write outbuffer to outfile
             fwrite(outbuffer,sizeof(ax_encript_block_t),blockcount,outfile);
+            total_read_len+=readlen;
+            _ax_notifiy_progress(on_progress, (float)total_read_len/(float)header.raw_len, ud);
         }while(readlen!=0);
         //write meta message
         fwrite(desc, strlen(desc), 1, outfile);
@@ -115,6 +124,7 @@ int ax_file_decode(char *inpath,char *outpath,char *password,ax_file_progress_cb
             //write outbuffer to file
             fwrite(outbuffer, 1, _ax_min(readlen, header.raw_len-inreadlen), outfile);
             inreadlen+=readlen;
+            _ax_notifiy_progress(on_progress, (float)inreadlen/(float)header.content_len, ud);
         } while (inreadlen<header.content_len);
         fclose(infile);
         fclose(outfile);
