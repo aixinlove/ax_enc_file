@@ -30,7 +30,7 @@ void _ax_file_init_password(ax_encript_block_t pwd[],char *password){
     int passwrodlen=strlen(password);
     char pwdbuff[pwdsize];
     int filloffset=0;
-    int segmentcount=ceil((float)pwdsize/(float)passwrodlen);
+    int segmentcount=ceil((double)pwdsize/(double)passwrodlen);
     int fullcount=segmentcount-1;
     for (int i=0; i<fullcount; i++) {
         memcpy(pwdbuff+filloffset, password, passwrodlen);
@@ -59,7 +59,7 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
         header.enc_type=ax_enc_func_name_to_value(func);
         header.raw_len=_ax_file_size(inpath);
         header.content_offset=sizeof(header);
-        header.content_len=sizeof(ax_encript_block_t)*(int)ceil((float)header.raw_len/(float)sizeof(ax_encript_block_t));
+        header.content_len=sizeof(ax_encript_block_t)*(int)ceil((double)header.raw_len/(double)sizeof(ax_encript_block_t));
         header.meta_offset=header.content_offset+header.content_len;
         header.meta_len=strlen(desc);
         //write header to output file
@@ -76,7 +76,7 @@ int ax_file_encode(char *inpath,char *outpath,char *password,char *func,char *de
         do{
             readlen=fread(inbuffer,1,_ax_file_buffer_size,infile);
             //encript buffer to out buffer
-            int blockcount=ceil((float)readlen/(float)sizeof(ax_encript_block_t));
+            int blockcount=ceil((double)readlen/(double)sizeof(ax_encript_block_t));
             for(int i=0;i<blockcount;i++){
                 //encript one block
                 ax_encript_do(&(inbuffer[i]), &(passwordblock[totalblock%_ax_file_num_of_passwrod]), &(outbuffer[i]), ax_encript_type_enc, header.enc_type);
@@ -115,7 +115,7 @@ int ax_file_decode(char *inpath,char *outpath,char *password,ax_file_progress_cb
         int totalblock=0;
         do {
             int readlen=fread(inbuffer, 1, _ax_min(_ax_file_buffer_size, header.content_len-inreadlen), infile);
-            int blockcount=ceil((float)readlen/(float)sizeof(ax_encript_block_t));
+            int blockcount=ceil((double)readlen/(double)sizeof(ax_encript_block_t));
             for (int i=0; i<blockcount; i++) {
                 //decode to outbuffer
                 ax_encript_do(&(inbuffer[i]), &(passwordblock[totalblock%_ax_file_num_of_passwrod]), &(outbuffer[i]), ax_encript_type_dec, header.enc_type);
