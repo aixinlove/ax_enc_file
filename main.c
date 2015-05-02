@@ -1,22 +1,87 @@
+//
+//  main.m
+//  axfile
+//
+//  Created by 彭运筹 on 15/5/2.
+//  Copyright (c) 2015年 彭运筹. All rights reserved.
+//
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "ax_enc_file.h"
-void progress(float progress,void *ud){
-	//printf("->%f\n",progress);
+#include <string.h>
+#import "ax_enc_file.h"
+#define ax_option_len 256
+void ax_show_progress(char *prefix,float progress,int len){
+    printf("%s%0.2f%% ", prefix,progress);
+    printf("\n\033[F\033[J");
 }
-int main(){
-	printf("encode a file\n");
-	ax_file_encode("a.txt","b.txt.ax","12345678901234567890","xxtea","a test file",progress,NULL);
-	printf("now decode\n");
-	ax_file_decode("b.txt.ax","c.txt","12345678901234567890",progress,NULL);
-    
-    char desc[512];
-    ax_file_read_desc("b.txt.ax", desc, sizeof(desc));
-    printf("desc->%s\n",desc);
-    struct ax_file_header_t header;
-    ax_file_read_header("b.txt.ax", &header);
-    char enctype[64];
-    ax_file_get_enctrypt_type(&header, enctype, sizeof(enctype));
-    printf("enctype->%s\n",enctype);
-	return 0;
+void onprogress_dec(float progress,void *ud){
+    ax_show_progress("decode:",progress,50);
+}
+void onprogress_enc(float progress,void *ud){
+    ax_show_progress("encode:",progress,50);
+}
+void get_option(char *option,char *key,char *value){
+    char *ch= strtok(option, "=");
+    if (ch!=NULL) {
+        memcpy(key, ch, strlen(ch));
+    }
+    ch = strtok(NULL, "=");
+    if (ch!=NULL) {
+        memcpy(value, ch, strlen(ch));
+    }
+}
+int main(int argc, const char * argv[]) {
+    struct{
+        char infile[ax_option_len];
+        char outfile[ax_option_len];
+        char password[ax_option_len];
+        char cipher[ax_option_len];
+        int8_t show_progress;
+        int8_t is_decode;
+    }options;
+    memset(&options, 0x0, sizeof(options));
+    for (int i=1; i<argc; i++) {
+        char key[64],value[256];
+        memset(key, 0x0, sizeof(key));
+        memset(value, 0x0, sizeof(value));
+        get_option((char *)argv[i], key, value);
+        if (strcasecmp(key, "in")==0) {
+            strncpy(options.infile, value, strlen(value));
+        }else if (strcasecmp(key, "out")==0) {
+            strncpy(options.outfile, value, strlen(value));
+        }if (strcasecmp(key, "password")==0) {
+            strncpy(options.password, value, strlen(value));
+        }if (strcasecmp(key, "progress")==0) {
+            if (strcasecmp(value, "true")==0) {
+                options.show_progress=1;
+            }
+        }if (strcasecmp(key, "cipher")==0){
+            strncpy(options.cipher, value, strlen(value));
+        }if (strcasecmp(key, "type")==0) {
+            if (strcasecmp(value, "enc")==0) {
+                options.is_decode=0;
+            }else{
+                options.is_decode=1;
+            }
+        }
+    }
+    ax_file_progress_cb *progresscb=NULL;
+    if (options.show_progress) {
+        if (options.is_decode) {
+            progresscb=onprogress_dec;
+        }else{
+            progresscb=onprogress_enc;
+        }
+    }
+    printf("in:%s\n",options.infile);
+    printf("out:%s\n",options.outfile);
+    printf("password:%s\n",options.password);
+    if (options.is_decode) {
+        ax_file_decode(options.infile, options.outfile, options.password, progresscb, NULL);
+    }else{
+        ax_file_encode(options.infile, options.outfile, options.password,options.cipher, "", progresscb, NULL);
+    }
+    printf("complete!\n");
+    return 0;
 }
