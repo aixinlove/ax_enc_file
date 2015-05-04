@@ -11,6 +11,7 @@
 #include <string.h>
 #import "ax_enc_file.h"
 #define ax_option_len 256
+
 void ax_show_progress(char *prefix,float progress,int len){
     printf("%s%0.2f%% ", prefix,progress);
     printf("\n\033[F\033[J");
@@ -40,6 +41,12 @@ int main(int argc, const char * argv[]) {
         int8_t show_progress;
         int8_t is_decode;
     }options;
+    if (argc<=4) {
+        printf("usage:\n");
+        printf("\tencode->  \n\t%s in=(in path) out=(out path) cipher=[xor|tea|xtea|xxtea] password=your password [progress=true]\n",argv[0]);
+        printf("\tdecode->  \n\t%s in=(in path) out=(out path) password=your password [progress=true]\n",argv[0]);
+        return -1;
+    }
     memset(&options, 0x0, sizeof(options));
     for (int i=1; i<argc; i++) {
         char key[64],value[256];
@@ -74,12 +81,28 @@ int main(int argc, const char * argv[]) {
             progresscb=onprogress_enc;
         }
     }
+    if (strlen(options.infile)==0) {
+        printf("please use in option \n");
+        return -1;
+    }
+    if (strlen(options.outfile)==0) {
+        printf("please use out option \n");
+        return -1;
+    }
+    if (strlen(options.password)==0) {
+        printf("please use password option \n");
+        return -1;
+    }
     printf("in:%s\n",options.infile);
     printf("out:%s\n",options.outfile);
     printf("password:%s\n",options.password);
     if (options.is_decode) {
         ax_file_decode(options.infile, options.outfile, options.password, progresscb, NULL);
     }else{
+        if (strlen(options.cipher)==0) {
+            printf("please use cipher option \n");
+            return -1;
+        }
         ax_file_encode(options.infile, options.outfile, options.password,options.cipher, "", progresscb, NULL);
     }
     printf("complete!\n");
